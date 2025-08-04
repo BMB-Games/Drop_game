@@ -52,6 +52,11 @@ public class Main implements ApplicationListener {
         bucketRect = new Rectangle();
         dropRect = new Rectangle();
 
+
+        music.setLooping(true);
+        music.setVolume(0.5f);
+        music.play();
+
     }
 
     @Override
