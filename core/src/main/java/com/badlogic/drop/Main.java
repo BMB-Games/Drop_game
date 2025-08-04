@@ -9,6 +9,9 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
@@ -24,6 +27,8 @@ public class Main implements ApplicationListener {
     private Float worldWidth = 8f;
     private Float worldHeight = 5f;
     private Sprite bucketSprite;
+    private Vector2 touchPosition;
+    private Array<Sprite> dropSprites;
 
     @Override
     public void create() {
@@ -36,6 +41,9 @@ public class Main implements ApplicationListener {
         viewport = new FitViewport(worldWidth, worldHeight);
         bucketSprite = new Sprite(bucketTexture);
         bucketSprite.setSize(1,1);
+        touchPosition = new Vector2();
+        dropSprites = new Array<>();
+
     }
 
     @Override
@@ -55,16 +63,13 @@ public class Main implements ApplicationListener {
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
-
         batch.draw(backgroundTexture, 0,0, worldWidth, worldHeight);
         bucketSprite.draw(batch);
-
-
         batch.end();
     }
 
     private void logic() {
-
+        bucketSprite.setX(MathUtils.clamp(bucketSprite.getX(), 0, worldWidth - bucketSprite.getWidth()));
     }
 
     private void input() {
@@ -77,6 +82,11 @@ public class Main implements ApplicationListener {
         }
 
 
+        if (Gdx.input.isTouched()) {
+            touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
+            viewport.unproject(touchPosition);
+            bucketSprite.setCenterX(touchPosition.x);
+        }
     }
 
     @Override
