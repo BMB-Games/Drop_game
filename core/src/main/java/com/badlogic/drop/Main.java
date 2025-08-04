@@ -15,6 +15,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
+import java.awt.*;
+
 
 public class Main implements ApplicationListener {
     private Texture backgroundTexture;
@@ -29,6 +31,10 @@ public class Main implements ApplicationListener {
     private Sprite bucketSprite;
     private Vector2 touchPosition;
     private Array<Sprite> dropSprites;
+    private float dropletTimer;
+    private Rectangle bucketRect;
+    private Rectangle dropRect;
+
 
     @Override
     public void create() {
@@ -43,6 +49,8 @@ public class Main implements ApplicationListener {
         bucketSprite.setSize(1,1);
         touchPosition = new Vector2();
         dropSprites = new Array<>();
+        bucketRect = new Rectangle();
+        dropRect = new Rectangle();
 
     }
 
@@ -65,11 +73,51 @@ public class Main implements ApplicationListener {
         batch.begin();
         batch.draw(backgroundTexture, 0,0, worldWidth, worldHeight);
         bucketSprite.draw(batch);
+        for (Sprite dropSprite : dropSprites) {
+            dropSprite.draw(batch);
+        }
         batch.end();
     }
 
+    public void createDroplet() {
+        float dropWidth = 1;
+        float dropHeight = 1;
+        Sprite dropSprite = new Sprite(dropTexture);
+        dropSprite.setSize(dropWidth, dropHeight);
+        dropSprite.setX(MathUtils.random(0, worldWidth - dropWidth));
+        dropSprite.setY(worldHeight);
+        dropSprites.add(dropSprite);
+    }
+
     private void logic() {
-        bucketSprite.setX(MathUtils.clamp(bucketSprite.getX(), 0, worldWidth - bucketSprite.getWidth()));
+        float bucketWidth = bucketSprite.getWidth();
+        bucketSprite.setX(MathUtils.clamp(bucketSprite.getX(), 0, worldWidth - bucketWidth));
+        float delta = Gdx.graphics.getDeltaTime();
+        float bucketHeight = bucketSprite.getHeight();
+        bucketRect.setRect(bucketSprite.getX(), bucketSprite.getY(), bucketWidth, bucketHeight);
+
+        for (int i = dropSprites.size - 1; i >= 0; i--) {
+            Sprite dropSprite = dropSprites.get(i);
+            float dropWidth = dropSprite.getWidth();
+            float dropHeight = dropSprite.getHeight();
+
+            dropSprite.translateY(-2f * delta);
+            dropRect.setRect(dropSprite.getX(), dropSprite.getY(), dropWidth, dropHeight);
+            if(dropRect.intersects(bucketRect)) {
+                dropSprites.removeIndex(i);
+                dropSound.play();
+            }
+
+            if (dropSprite.getY() < -dropHeight) {
+                dropSprites.removeIndex(i);
+            }
+        }
+
+        dropletTimer += delta;
+        if (dropletTimer >= 1) {
+            dropletTimer = 0;
+            createDroplet();
+        }
     }
 
     private void input() {
