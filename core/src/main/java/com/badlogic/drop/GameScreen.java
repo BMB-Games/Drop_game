@@ -1,14 +1,13 @@
 package com.badlogic.drop;
 
-import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
@@ -18,45 +17,50 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.awt.*;
 
 
-public class Main implements ApplicationListener {
-    private Texture backgroundTexture;
-    private Texture bucketTexture;
-    private Texture dropTexture;
-    private Sound dropSound;
-    private Music music;
-    private SpriteBatch batch;
-    private FitViewport viewport;
-    private Float worldWidth = 8f;
-    private Float worldHeight = 5f;
-    private Sprite bucketSprite;
-    private Vector2 touchPosition;
-    private Array<Sprite> dropSprites;
-    private float dropletTimer;
-    private Rectangle bucketRect;
-    private Rectangle dropRect;
+public class GameScreen implements Screen {
+    final Drop game;
+    Texture backgroundTexture;
+    Texture bucketTexture;
+    Texture dropTexture;
+    Sound dropSound;
+    Music music;
+    FitViewport viewport;
+    Float worldWidth = 8f;
+    Float worldHeight = 5f;
+    Sprite bucketSprite;
+    Vector2 touchPosition;
+    Array<Sprite> dropSprites;
+    float dropletTimer;
+    Rectangle bucketRect;
+    Rectangle dropRect;
+    int dropsCollected;
 
 
-    @Override
-    public void create() {
+    public GameScreen(Drop game) {
+        this.game = game;
         backgroundTexture = new Texture("background.png");
         bucketTexture = new Texture("bucket.png");
         dropTexture = new Texture("drop.png");
         dropSound = Gdx.audio.newSound(Gdx.files.internal("drop.mp3"));
         music = Gdx.audio.newMusic(Gdx.files.internal("music.mp3"));
-        batch = new SpriteBatch();
         viewport = new FitViewport(worldWidth, worldHeight);
         bucketSprite = new Sprite(bucketTexture);
-        bucketSprite.setSize(1,1);
+        bucketSprite.setSize(1, 1);
         touchPosition = new Vector2();
         dropSprites = new Array<>();
         bucketRect = new Rectangle();
         dropRect = new Rectangle();
+        dropsCollected = 0;
 
 
         music.setLooping(true);
         music.setVolume(0.5f);
-        music.play();
 
+    }
+
+    @Override
+    public void show() {
+        music.play();
     }
 
     @Override
@@ -65,23 +69,46 @@ public class Main implements ApplicationListener {
     }
 
     @Override
-    public void render() {
+    public void render(float delta) {
         input();
         logic();
         draw();
     }
 
+    private void input() {
+        float speed = 10f;
+        float delta = Gdx.graphics.getDeltaTime();
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            bucketSprite.translateX(speed * delta);
+        } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            bucketSprite.translateX(-speed * delta);
+        }
+
+
+        if (Gdx.input.isTouched()) {
+            touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
+            viewport.unproject(touchPosition);
+            bucketSprite.setCenterX(touchPosition.x);
+        }
+    }
+
     private void draw() {
         ScreenUtils.clear(Color.BLACK);
         viewport.apply();
-        batch.setProjectionMatrix(viewport.getCamera().combined);
-        batch.begin();
-        batch.draw(backgroundTexture, 0,0, worldWidth, worldHeight);
-        bucketSprite.draw(batch);
+        game.batch.setProjectionMatrix(viewport.getCamera().combined);
+        game.font.setColor(Color.WHITE);
+        game.batch.begin();
+
+        game.batch.draw(backgroundTexture, 0, 0, worldWidth, worldHeight);
+        bucketSprite.draw(game.batch);
+
         for (Sprite dropSprite : dropSprites) {
-            dropSprite.draw(batch);
+            dropSprite.draw(game.batch);
         }
-        batch.end();
+
+        game.font.draw(game.batch, "Score: " + dropsCollected, 0.1f, (worldHeight - 0.1f));
+
+        game.batch.end();
     }
 
     public void createDroplet() {
@@ -108,9 +135,10 @@ public class Main implements ApplicationListener {
 
             dropSprite.translateY(-2f * delta);
             dropRect.setRect(dropSprite.getX(), dropSprite.getY(), dropWidth, dropHeight);
-            if(dropRect.intersects(bucketRect)) {
+            if (dropRect.intersects(bucketRect)) {
                 dropSprites.removeIndex(i);
                 dropSound.play();
+                dropsCollected++;
             }
 
             if (dropSprite.getY() < -dropHeight) {
@@ -125,22 +153,6 @@ public class Main implements ApplicationListener {
         }
     }
 
-    private void input() {
-        float speed = 10f;
-        float delta = Gdx.graphics.getDeltaTime();
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            bucketSprite.translateX(speed * delta);
-        } else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            bucketSprite.translateX(-speed * delta);
-        }
-
-
-        if (Gdx.input.isTouched()) {
-            touchPosition.set(Gdx.input.getX(), Gdx.input.getY());
-            viewport.unproject(touchPosition);
-            bucketSprite.setCenterX(touchPosition.x);
-        }
-    }
 
     @Override
     public void pause() {
@@ -153,7 +165,16 @@ public class Main implements ApplicationListener {
     }
 
     @Override
+    public void hide() {
+
+    }
+
+    @Override
     public void dispose() {
-        // Destroy application's resources here.
+        backgroundTexture.dispose();
+        bucketTexture.dispose();
+        dropTexture.dispose();
+        dropSound.dispose();
+        music.dispose();
     }
 }
